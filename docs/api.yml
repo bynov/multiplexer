@@ -1,0 +1,49 @@
+openapi: 3.0.0
+
+info:
+  title: Multiplexer
+  version: 0.1.0
+
+paths:
+  /v1/content:
+    post:
+      requestBody:
+        description: get content by every url provided
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                urls:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  content:
+                    type: array
+                    items:
+                      type: string
+        '400':
+          $ref: '#/components/responses/GenericError'
+        '408':
+          $ref: '#/components/responses/GenericError'
+        '500':
+          $ref: '#/components/responses/GenericError'
+      tags: ["v1"]
+
+components:
+
+  responses:
+
+    GenericError:
+      description: Generic Error
+      content:
+        text/plain:
+          example: "invalid url len. Allowed: 0 < len < 20, got: 0"
