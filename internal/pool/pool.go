@@ -106,7 +106,13 @@ func (p *Pool) worker(ctx context.Context, urls <-chan orderedURL, results chan<
 			return
 		default:
 			for url := range urls {
-				resp, err := p.cl.Get(url.url)
+				req, err := http.NewRequestWithContext(ctx, http.MethodGet, url.url, nil)
+				if err != nil {
+					p.errChan <- err
+					return
+				}
+
+				resp, err := p.cl.Do(req)
 				if err != nil {
 					p.errChan <- err
 					return
