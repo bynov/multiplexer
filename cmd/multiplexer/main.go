@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -26,14 +25,6 @@ const (
 func main() {
 	svc := multiplexer.NewService(outgoingLimitation)
 
-	// Setup listener with connection limit
-	l, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
-	if err != nil {
-		log.Error().Err(err).Send()
-		os.Exit(1)
-	}
-	defer func() { _ = l.Close() }()
-
 	// Init router
 	r := chi.NewRouter()
 	r.Use(NewLimitMiddleWare(requestLimit))
@@ -45,6 +36,7 @@ func main() {
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		Handler:      r,
+		Addr:         fmt.Sprintf(":%d", port),
 	}
 
 	idleConnsClosed := make(chan struct{})
@@ -59,7 +51,12 @@ func main() {
 		close(idleConnsClosed)
 	}()
 
-	go func() { _ = s.Serve(l) }()
+	go func() {
+		if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Err(err).Send()
+			os.Exit(1)
+		}
+	}()
 
 	log.Info().Str("HTTP server is started", s.Addr).Send()
 
