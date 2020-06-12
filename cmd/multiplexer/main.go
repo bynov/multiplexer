@@ -12,14 +12,13 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/rs/zerolog/log"
-	"golang.org/x/net/netutil"
 
 	"github.com/bynov/multiplexer/internal/multiplexer"
 	"github.com/bynov/multiplexer/internal/transport"
 )
 
 const (
-	connectionLimit    = 100
+	requestLimit       = 1
 	port               = 8080
 	outgoingLimitation = 4
 )
@@ -35,10 +34,9 @@ func main() {
 	}
 	defer func() { _ = l.Close() }()
 
-	l = netutil.LimitListener(l, connectionLimit)
-
 	// Init router
 	r := chi.NewRouter()
+	r.Use(NewLimitMiddleWare(requestLimit))
 	r.Route("/v1", func(r chi.Router) {
 		r.Post("/content", transport.NewGetContentEndpoint(svc))
 	})
@@ -67,4 +65,25 @@ func main() {
 
 	<-idleConnsClosed
 	log.Info().Msg("Service gracefully stopped")
+}
+
+func NewLimitMiddleWare(limit int) func(http.Handler) http.Handler {
+	if limit <= 0 {
+		panic("Invalid limit")
+	}
+
+	sem := make(chan struct{}, limit)
+	return func(next http.Handler) http.Handler {
+		fn := func(w http.ResponseWriter, r *http.Request) {
+			select {
+			case sem <- struct{}{}:
+				next.ServeHTTP(w, r)
+				<-sem
+			default:
+				w.WriteHeader(http.StatusTooManyRequests)
+			}
+		}
+
+		return http.HandlerFunc(fn)
+	}
 }
