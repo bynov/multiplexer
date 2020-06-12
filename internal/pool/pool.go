@@ -48,8 +48,8 @@ func (p *Pool) Do(ctx context.Context, urls []string) ([]string, error) {
 	p.wg.Add(p.maxWorkers)
 
 	// Create a separate ctx for workers
-	workerCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	workerCtx, cancelWorkers := context.WithCancel(ctx)
+	defer cancelWorkers()
 
 	// Spawn workers
 	for i := 0; i < p.maxWorkers; i++ {
@@ -73,6 +73,7 @@ func (p *Pool) Do(ctx context.Context, urls []string) ([]string, error) {
 	case <-ctx.Done():
 		return nil, nil
 	case err := <-p.errChan:
+		cancelWorkers()
 		return nil, err
 	case <-done:
 	}
