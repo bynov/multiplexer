@@ -43,7 +43,7 @@ func (p *Pool) Do(ctx context.Context, urls []string) ([]string, error) {
 	var work = make(chan orderedURL, len(urls))
 	var result = make(chan orderedContent, len(urls))
 
-	var done = make(chan struct{}, 1)
+	var done = make(chan struct{})
 
 	p.wg.Add(p.maxWorkers)
 
