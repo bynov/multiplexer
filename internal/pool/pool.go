@@ -104,30 +104,31 @@ func (p *Pool) worker(ctx context.Context, urls <-chan orderedURL, results chan<
 		select {
 		case <-ctx.Done():
 			return
-		default:
-			for url := range urls {
-				req, err := http.NewRequestWithContext(ctx, http.MethodGet, url.url, nil)
-				if err != nil {
-					p.errChan <- err
-					return
-				}
-
-				resp, err := p.cl.Do(req)
-				if err != nil {
-					p.errChan <- err
-					return
-				}
-
-				b, err := ioutil.ReadAll(resp.Body)
-				_ = resp.Body.Close()
-				if err != nil {
-					p.errChan <- err
-					return
-				}
-
-				results <- orderedContent{content: string(b), index: url.index}
+		case url, ok := <-urls:
+			if !ok {
+				return
 			}
-			return
+
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, url.url, nil)
+			if err != nil {
+				p.errChan <- err
+				return
+			}
+
+			resp, err := p.cl.Do(req)
+			if err != nil {
+				p.errChan <- err
+				return
+			}
+
+			b, err := ioutil.ReadAll(resp.Body)
+			_ = resp.Body.Close()
+			if err != nil {
+				p.errChan <- err
+				return
+			}
+
+			results <- orderedContent{content: string(b), index: url.index}
 		}
 	}
 
