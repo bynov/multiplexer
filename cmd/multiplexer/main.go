@@ -19,12 +19,13 @@ import (
 )
 
 const (
-	connectionLimit = 100
-	port            = 8080
+	connectionLimit    = 100
+	port               = 8080
+	outgoingLimitation = 4
 )
 
 func main() {
-	svc := multiplexer.NewService(4)
+	svc := multiplexer.NewService(outgoingLimitation)
 
 	// Setup listener with connection limit
 	l, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
